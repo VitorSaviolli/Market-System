@@ -1,0 +1,15 @@
+from sqlalchemy import Column, Integer,String, Float, DataTime, ForeignKey, Table
+from sqlalchemy.orm import relationship
+from datetime import datetime
+from database.database import Base
+
+#tabela para produtos que estão em venda
+sales_products = Table(
+    'sale_products',
+    Base.metadata,
+    Column('sale_id', Integer, ForeignKey('sales.id')),
+    Column('product_id', Integer, ForeignKey(""))
+    Column
+    Column
+
+)
