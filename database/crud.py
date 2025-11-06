@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from database.models import Product, Sale
+from database.models import Product, Sale, sales_products
 from typing import List, Optional
 #Optional -> pode retorna nulo ou string/int/float etc
 #função para criar produtos
@@ -63,7 +63,7 @@ def create_sale(session:Session, products: List[dict], payment_method: str):
     ]
     """
     total = 0
-    sale_products = []
+    sale_items = []
 
     for item in products:
         product = get_product_by_id(session, item['product_id'])
@@ -74,7 +74,11 @@ def create_sale(session:Session, products: List[dict], payment_method: str):
                 #diminui do estoque
                 product.stock -= item['quantity']
                 #adiciona o produto à venda
-                sale_products.append(product)
+                sale_items.append({
+                    'product': product,
+                    'quantity': item['quantity'],
+                    'unit_price': product.price
+                })
         else:
             return None #não existe ou sem estoque
         
@@ -84,10 +88,19 @@ def create_sale(session:Session, products: List[dict], payment_method: str):
         payment_method = payment_method
     )
 
-    new_sale.products = sale_products
-
-    #salva quaisquer alterações
     session.add(new_sale)
+    session.flush()
+
+    for item in sale_items:
+        # STATMENTE para comando INSERT SQL
+        stmt = sales_products.insert().values(
+            sale_id=new_sale.id,
+            product_id=item['product'].id,
+            quantity=item['quantity'],
+            unit_price=item['unit_price']
+        )
+        session.execute(stmt)
+    #salva quaisquer alterações
     session.commit()
     session.refresh(new_sale)
 

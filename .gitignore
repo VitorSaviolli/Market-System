@@ -16,7 +16,7 @@ __pycache__/
 # IDE
 .vscode/
 .idea/
-
+.history/
 # Sistema
 .DS_Store
 Thumbs.db
