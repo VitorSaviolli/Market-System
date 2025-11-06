@@ -13,6 +13,11 @@ Sistema completo para gerenciar produtos e vendas de um mercado, incluindo:
 - Relacionamento entre produtos e vendas
 - Operações CRUD completas
 - Validação de estoque em tempo real
+  
+## ⭐ Apoie o projeto
+
+Se você achou este projeto útil para seus estudos, deixe uma ⭐ no repositório!  
+Cada estrela me incentiva a melhorar e documentar ainda mais! 🚀
 
 ## 🚀 Tecnologias Utilizadas
 
@@ -138,5 +143,5 @@ O teste irá:
 
 ## 📄 Licença
 
-Este projeto está sob a licença MIT - sinta-se livre para usar como aprendizado.
+Sinta-se livre para usar como aprendizado.
 ```
