@@ -1,1 +1,0 @@
-return session.query(Sale).filter(Sale.id == sale_id).first()
