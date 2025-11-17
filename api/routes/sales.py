@@ -42,3 +42,4 @@ def create_sale(sale: SaleCreate, db: Session = Depends(get_db)):
 def get_all_sales(db: Session = Depends(get_db)):
     sales = crud.get_all_sales(db)
     return sales
+
