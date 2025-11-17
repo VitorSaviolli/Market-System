@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from database.models import Product, Sale, sales_products
 from typing import List, Optional
 #Optional -> pode retorna nulo ou string/int/float etc
-#função para criar produtos
+#função para criar produtos                                               #desc: opcional
 def create_product(session: Session, name: str, price: float, stock: int, description: str = None):
     new_product= Product(
         name=name,

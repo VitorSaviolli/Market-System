@@ -18,7 +18,12 @@ class ProductBase(BaseModel): #torna um schema Pydantic
     description: Optional[str] = Field(None, max_length=500, description="Descrição")
 
 class ProductCreate(ProductBase):
-    pass
+    # herda TUDO de schemas.py sem adicionar nada novo
+    #name: str = Field(..., min_length=1, max_length=200, description="Nome do Produto")
+    #price: float = Field(..., gt=0, description="Preço deve ser maior que 0")
+    #stock: int = Field(..., ge=0, description="Estoque deve ser maior ou igual a 0")
+    #description: Optional[str] = Field(None, max_length=500, description="Descrição")"
+    pass # Evita repetir código
 
 class ProductUpdate(BaseModel): #Nao herda ProductBase para nao obrigar a trocar todos os campos
     name: Optional[str] = Field(None, min_length=1, max_length=200)
@@ -27,7 +32,7 @@ class ProductUpdate(BaseModel): #Nao herda ProductBase para nao obrigar a trocar
     description: Optional[str] = Field(None, max_length=500)
 
 class ProductResponse(ProductBase): #herda de product base para pegar os campos
-    #Usado quando a API retonra dados de produtos(GET,POST,PUT)
+    #Usado quando a API retorna dados de produtos(GET,POST,PUT)
     id:int #isso para ProductBase possuir um ID | adiciona o campo id
     #Nao foi feito o ID direto no ProductBase para evitar conflito com o Pydantic
     class Config:
