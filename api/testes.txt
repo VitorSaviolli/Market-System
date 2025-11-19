@@ -1,0 +1,567 @@
+================================================================================
+                    🛒 ROTAS DA API - GUIA DE TESTES
+================================================================================
+(feito por IA)
+(foi usado o Postman para o teste)
+BASE URL: http://localhost:8000
+================================================================================
+                    RODAR API
+================================================================================
+uvicorn api.main:app --reload
+================================================================================
+                        📦 PRODUTOS (PRODUCTS)
+================================================================================
+
+1️⃣ CRIAR PRODUTO
+-----------------
+Método: POST
+URL: http://localhost:8000/products/
+Body (JSON):
+{
+  "name": "Arroz",
+  "price": 10.50,
+  "stock": 100,
+  "description": "Arroz branco tipo 1"
+}
+
+Resposta esperada: 201 Created
+{
+  "id": 1,
+  "name": "Arroz",
+  "price": 10.5,
+  "stock": 100,
+  "description": "Arroz branco tipo 1"
+}
+
+---
+
+EXEMPLOS ADICIONAIS PARA CRIAR:
+
+Produto 2:
+{
+  "name": "Feijão",
+  "price": 8.00,
+  "stock": 50,
+  "description": "Feijão preto"
+}
+
+Produto 3:
+{
+  "name": "Açúcar",
+  "price": 5.00,
+  "stock": 200,
+  "description": "Açúcar cristal"
+}
+
+Produto 4:
+{
+  "name": "Café",
+  "price": 12.00,
+  "stock": 0,
+  "description": "Café torrado e moído"
+}
+
+Produto 5:
+{
+  "name": "Leite",
+  "price": 4.50,
+  "stock": 80,
+  "description": "Leite integral"
+}
+
+---
+
+2️⃣ LISTAR TODOS OS PRODUTOS
+----------------------------
+Método: GET
+URL: http://localhost:8000/products/
+
+Resposta esperada: 200 OK
+[
+  {
+    "id": 1,
+    "name": "Arroz",
+    "price": 10.5,
+    "stock": 100,
+    "description": "Arroz branco tipo 1"
+  },
+  {
+    "id": 2,
+    "name": "Feijão",
+    "price": 8.0,
+    "stock": 50,
+    "description": "Feijão preto"
+  }
+]
+
+---
+
+3️⃣ BUSCAR PRODUTO POR ID
+-------------------------
+Método: GET
+URL: http://localhost:8000/products/1
+
+Resposta esperada: 200 OK
+{
+  "id": 1,
+  "name": "Arroz",
+  "price": 10.5,
+  "stock": 100,
+  "description": "Arroz branco tipo 1"
+}
+
+Teste também:
+- GET /products/2
+- GET /products/999 (deve retornar 404)
+
+---
+
+4️⃣ ATUALIZAR PRODUTO (atualização parcial)
+-------------------------------------------
+Método: PUT
+URL: http://localhost:8000/products/1
+Body (JSON) - Envie APENAS o que quer mudar:
+
+Atualizar só o preço:
+{
+  "price": 12.00
+}
+
+Atualizar preço e estoque:
+{
+  "price": 11.50,
+  "stock": 150
+}
+
+Atualizar tudo:
+{
+  "name": "Arroz Integral",
+  "price": 15.00,
+  "stock": 80,
+  "description": "Arroz integral tipo 1"
+}
+
+Resposta esperada: 200 OK
+{
+  "id": 1,
+  "name": "Arroz",
+  "price": 12.0,
+  "stock": 100,
+  "description": "Arroz branco tipo 1"
+}
+
+---
+
+5️⃣ DELETAR UM PRODUTO
+----------------------
+Método: DELETE
+URL: http://localhost:8000/products/1
+
+Resposta esperada: 204 No Content
+(sem corpo na resposta)
+
+Teste também:
+- DELETE /products/999 (deve retornar 404)
+
+================================================================================
+                    🗑️ DELETAR MÚLTIPLOS PRODUTOS
+================================================================================
+
+6️⃣ DELETAR VÁRIOS PRODUTOS (POR LISTA DE IDs)
+----------------------------------------------
+Método: DELETE
+URL: http://localhost:8000/products/?products_ids=1&products_ids=2&products_ids=3
+
+Ou de forma mais clara:
+http://localhost:8000/products/?products_ids=2&products_ids=3&products_ids=4
+
+Resposta esperada: 204 No Content
+
+Se algum produto não existir:
+Resposta: 404 Not Found
+{
+  "detail": "Produto não encontrado: [999, 888]"
+}
+
+DICA NO POSTMAN:
+Adicione múltiplos Query Params:
+- Key: products_ids | Value: 1
+- Key: products_ids | Value: 2
+- Key: products_ids | Value: 3
+
+IMPORTANTE: A rota é DELETE /products/ (com barra no final)
+            NÃO confundir com DELETE /products/{id}
+
+---
+
+7️⃣ DELETAR PRODUTOS POR INTERVALO (RANGE)
+------------------------------------------
+Método: DELETE
+URL: http://localhost:8000/products/range?start_id=1&end_id=50
+
+Deletar produtos de 1 a 50:
+http://localhost:8000/products/range?start_id=1&end_id=50
+
+Deletar produtos de 10 a 20:
+http://localhost:8000/products/range?start_id=10&end_id=20
+
+Deletar apenas o produto 5:
+http://localhost:8000/products/range?start_id=5&end_id=5
+
+Deletar produtos de 100 a 200:
+http://localhost:8000/products/range?start_id=100&end_id=200
+
+Resposta esperada: 204 No Content
+
+ERROS POSSÍVEIS:
+- start_id > end_id → 400 Bad Request
+  Exemplo: start_id=50&end_id=10
+  Erro: "start_id (50) deve ser menor que ou igual ao end_id(10)"
+
+- start_id < 1 → 400 Bad Request
+  Exemplo: start_id=0&end_id=10
+  Erro: "start_id deve ser maior que 0"
+
+- Nenhum produto no intervalo → 404 Not Found
+  Exemplo: start_id=999&end_id=1000 (produtos não existem)
+  Erro: "Nenhum produto encontrado no intervalo de 999 até 1000"
+
+CASOS DE USO:
+- Limpar banco de testes: start_id=1&end_id=1000
+- Deletar lote específico: start_id=50&end_id=100
+- Remover produtos antigos: start_id=1&end_id=500
+
+================================================================================
+                    🔄 MESCLAR PRODUTOS DUPLICADOS
+================================================================================
+
+8️⃣ MESCLAR PRODUTOS DUPLICADOS (SOMA ESTOQUE)
+----------------------------------------------
+Método: POST
+URL: http://localhost:8000/products/merge-duplicates?keep=first
+
+⚠️ IMPORTANTE: Esta rota MODIFICA o banco de dados!
+- Mantém UM produto de cada nome
+- SOMA os estoques de todos os duplicados
+- DELETA os produtos duplicados
+
+---
+
+OPÇÃO 1: Manter o PRIMEIRO produto (menor ID)
+http://localhost:8000/products/merge-duplicates?keep=first
+
+OPÇÃO 2: Manter o ÚLTIMO produto (maior ID)
+http://localhost:8000/products/merge-duplicates?keep=last
+
+---
+
+Resposta esperada: 200 OK
+{
+  "message": "24 produtos duplicados foram mesclados",
+  "merged_count": 24,
+  "kept": "first"
+}
+
+---
+
+EXEMPLO PRÁTICO (keep=first):
+
+ANTES da mesclagem:
+┌────┬───────┬─────────┬─────────┐
+│ ID │ Nome  │ Preço   │ Estoque │
+├────┼───────┼─────────┼─────────┤
+│ 9  │ Café  │ 15.00   │ 30      │
+│ 14 │ Café  │ 15.00   │ 30      │ ← Duplicado
+│ 19 │ Café  │ 15.00   │ 30      │ ← Duplicado
+│ 24 │ Café  │ 15.00   │ 30      │ ← Duplicado
+│ 29 │ Café  │ 15.00   │ 30      │ ← Duplicado
+└────┴───────┴─────────┴─────────┘
+
+DEPOIS da mesclagem (keep=first):
+┌────┬───────┬─────────┬─────────┐
+│ ID │ Nome  │ Preço   │ Estoque │
+├────┼───────┼─────────┼─────────┤
+│ 9  │ Café  │ 15.00   │ 150     │ ← Somou: 30+30+30+30+30
+└────┴───────┴─────────┴─────────┘
+
+IDs deletados: 14, 19, 24, 29
+
+---
+
+EXEMPLO PRÁTICO (keep=last):
+
+ANTES da mesclagem:
+┌────┬───────┬─────────┬─────────┐
+│ ID │ Nome  │ Preço   │ Estoque │
+├────┼───────┼─────────┼─────────┤
+│ 11 │ Arroz │ 10.50   │ 100     │
+│ 16 │ Arroz │ 10.50   │ 100     │ ← Duplicado
+│ 21 │ Arroz │ 10.50   │ 100     │ ← Duplicado
+│ 26 │ Arroz │ 10.50   │ 100     │ ← Duplicado
+│ 31 │ Arroz │ 10.50   │ 100     │ ← Duplicado
+└────┴───────┴─────────┴─────────┘
+
+DEPOIS da mesclagem (keep=last):
+┌────┬───────┬─────────┬─────────┐
+│ ID │ Nome  │ Preço   │ Estoque │
+├────┼───────┼─────────┼─────────┤
+│ 31 │ Arroz │ 10.50   │ 500     │ ← Manteve o último ID
+└────┴───────┴─────────┴─────────┘
+
+IDs deletados: 11, 16, 21, 26
+
+---
+
+CASOS DE USO:
+- Limpar banco de testes com produtos duplicados
+- Consolidar produtos importados
+- Corrigir erros de cadastro em massa
+
+---
+
+ERROS POSSÍVEIS:
+
+1. Parâmetro inválido:
+   URL: ?keep=middle
+   Resposta: 400 Bad Request
+   {
+     "detail": "Parâmetro 'keep' deve ser 'first' ou 'last' "
+   }
+
+2. Nenhum duplicado encontrado:
+   Resposta: 404 Not Found
+   {
+     "detail": "Nenhum produto duplicado encontrado"
+   }
+
+---
+
+⚠️ CUIDADO:
+- Esta operação é IRREVERSÍVEL!
+- Faça backup do banco antes (copie market.db)
+- Teste em ambiente de desenvolvimento primeiro
+- Liste os produtos antes e depois para confirmar
+
+---
+
+PASSO A PASSO RECOMENDADO:
+
+1. Listar produtos atuais:
+   GET /products/
+
+2. Identificar duplicados manualmente
+
+3. Fazer backup:
+   Copie o arquivo market.db
+
+4. Executar mesclagem:
+   POST /products/merge-duplicates?keep=first
+
+5. Verificar resultado:
+   GET /products/
+
+6. Confirmar que estoques foram somados corretamente
+
+================================================================================
+                        🛒 VENDAS (SALES)
+================================================================================
+
+9️⃣ CRIAR VENDA
+---------------
+Método: POST
+URL: http://localhost:8000/sales/
+Body (JSON):
+{
+  "products": [
+    {
+      "product_id": 1,
+      "quantity": 2
+    },
+    {
+      "product_id": 2,
+      "quantity": 1
+    }
+  ],
+  "payment_method": "Dinheiro"
+}
+
+Resposta esperada: 201 Created
+{
+  "id": 1,
+  "date": "2025-11-18T20:30:00",
+  "total": 29.0,
+  "payment_method": "Dinheiro"
+}
+
+---
+
+EXEMPLOS ADICIONAIS DE VENDAS:
+
+Venda com 1 produto:
+{
+  "products": [
+    {
+      "product_id": 3,
+      "quantity": 5
+    }
+  ],
+  "payment_method": "PIX"
+}
+
+Venda com 3 produtos:
+{
+  "products": [
+    {
+      "product_id": 1,
+      "quantity": 1
+    },
+    {
+      "product_id": 3,
+      "quantity": 2
+    },
+    {
+      "product_id": 5,
+      "quantity": 3
+    }
+  ],
+  "payment_method": "Cartão de Crédito"
+}
+
+Venda grande (5 produtos diferentes):
+{
+  "products": [
+    {"product_id": 1, "quantity": 2},
+    {"product_id": 2, "quantity": 1},
+    {"product_id": 3, "quantity": 5},
+    {"product_id": 4, "quantity": 3},
+    {"product_id": 5, "quantity": 4}
+  ],
+  "payment_method": "Débito"
+}
+
+---
+
+🔟 LISTAR TODAS AS VENDAS
+--------------------------
+Método: GET
+URL: http://localhost:8000/sales/
+
+Resposta esperada: 200 OK
+[
+  {
+    "id": 1,
+    "date": "2025-11-18T20:30:00",
+    "total": 29.0,
+    "payment_method": "Dinheiro"
+  },
+  {
+    "id": 2,
+    "date": "2025-11-18T21:00:00",
+    "total": 25.0,
+    "payment_method": "PIX"
+  }
+]
+
+---
+
+1️⃣1️⃣ BUSCAR VENDA POR ID
+-------------------------
+Método: GET
+URL: http://localhost:8000/sales/1
+
+Resposta esperada: 200 OK
+{
+  "id": 1,
+  "date": "2025-11-18T20:30:00",
+  "total": 29.0,
+  "payment_method": "Dinheiro"
+}
+
+Teste também:
+- GET /sales/2
+- GET /sales/999 (deve retornar 404)
+
+================================================================================
+                        🧪 ORDEM RECOMENDADA DE TESTES
+================================================================================
+
+SEQUÊNCIA BÁSICA:
+-----------------
+1. Criar 5 produtos diferentes (POST /products/)
+2. Listar todos os produtos (GET /products/)
+3. Buscar produto por ID (GET /products/1)
+4. Atualizar preço de um produto (PUT /products/1)
+5. Criar primeira venda (POST /sales/)
+6. Listar todas as vendas (GET /sales/)
+7. Buscar venda específica (GET /sales/1)
+8. Deletar um produto (DELETE /products/1)
+9. Deletar vários produtos de uma vez (DELETE /products/)
+10. Deletar produtos por intervalo (DELETE /products/range)
+
+TESTES COM DUPLICADOS:
+----------------------
+11. Criar produtos duplicados (POST /products/ várias vezes com mesmo nome)
+12. Listar e confirmar duplicados (GET /products/)
+13. Mesclar duplicados (POST /products/merge-duplicates?keep=first)
+14. Verificar que estoques foram somados (GET /products/)
+
+TESTES AVANÇADOS:
+-----------------
+15. Tentar criar produto com preço negativo (deve dar erro 422)
+16. Tentar criar produto sem nome (deve dar erro 422)
+17. Tentar buscar produto inexistente (deve dar 404)
+18. Tentar criar venda com produto que não existe (deve dar erro 400)
+19. Tentar criar venda com quantidade maior que o estoque (deve dar erro 400)
+20. Deletar produto e tentar buscá-lo depois (deve dar 404)
+21. Deletar intervalo com start_id > end_id (deve dar erro 400)
+22. Deletar intervalo vazio (nenhum produto existe) (deve dar erro 404)
+23. Tentar mesclar quando não há duplicados (deve dar erro 404)
+24. Tentar mesclar com parâmetro inválido (deve dar erro 400)
+
+TESTES DE PERFORMANCE:
+----------------------
+25. Criar 100 produtos em sequência
+26. Listar todos os 100 produtos
+27. Deletar todos de uma vez (range: 1-100)
+28. Confirmar que todos foram deletados
+
+================================================================================
+                        📊 RESUMO COMPLETO DAS ROTAS
+================================================================================
+
+PRODUTOS:
+---------
+POST   /products/                           → Criar produto
+GET    /products/                           → Listar todos
+GET    /products/{id}                       → Buscar por ID
+PUT    /products/{id}                       → Atualizar
+POST   /products/merge-duplicates?keep=...  → Mesclar duplicados ✨
+DELETE /products/{id}                       → Deletar um
+DELETE /products/?products_ids=1&...        → Deletar vários (lista)
+DELETE /products/range?start_id=1&end_id=50 → Deletar intervalo
+
+VENDAS:
+-------
+POST   /sales/                              → Criar venda
+GET    /sales/                              → Listar todas
+GET    /sales/{id}                          → Buscar por ID
+
+DOCUMENTAÇÃO:
+-------------
+GET    /                                    → Informações da API
+GET    /health                              → Status da API (health check)
+GET    /docs                                → Swagger UI (interface interativa)
+GET    /redoc                               → ReDoc (documentação alternativa)
+
+================================================================================
+                        FIM DO GUIA DE TESTES
+================================================================================
+
+💡 Dica: Sempre teste no Swagger (/docs) primeiro para ver a documentação
+         interativa antes de usar o Postman!
+
+🎯 Boa sorte nos testes! 🚀
+
+⚠️ Lembre-se: A rota /merge-duplicates deve estar ANTES de /{product_id}!
+
+================================================================================

@@ -43,3 +43,11 @@ def get_all_sales(db: Session = Depends(get_db)):
     sales = crud.get_all_sales(db)
     return sales
 
+#busca a venda por  ID
+#R -> RECEIVE
+@router.get("/{sale_id}", response_model=SaleResponse)
+def get_sale(sale_id: int, db: Session = Depends(get_db)):
+    sale = crud.get_sale_by_id(db, sale_id)
+    if not sale:
+        raise HTTPException(status_code=404, detail="Venda não encontrada")
+    return sale

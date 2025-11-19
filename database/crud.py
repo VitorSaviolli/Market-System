@@ -54,6 +54,64 @@ def delete_product(session: Session, product_id: int):
     
     return False
 
+#Função para remover duplicados
+#keep: Parâmetro que decide qual produto MANTER baseado no ID, (primeiro ID ou ultimo ID?)
+def remove_duplicate_products(session:Session, keep: str = "first") -> int:
+    from sqlalchemy import func
+    #func: permite usar funções SQL como:
+    # COUNT(), SUM(), AVG(), MAX(), MIN()
+
+    duplicates = (
+        session.query(Product.name, func.count(Product.id)) #quantas vezes esse nome aparece
+        .group_by(Product.name)
+        #Antes:
+        # ID | Nome
+        # ---|-----
+        # 1  | Café
+        # 2  | Café
+        # 3  | Arroz
+        # 4  | Café
+        # Depois do GROUP BY:
+        # Grupo "Café": [1, 2, 4]  → Count = 3
+        # Grupo "Arroz": [3]       → Count = 1
+        .having(func.count(Product.id) > 1) #se for maior que um quer dizer que é duplicado
+        .all() #executa a query e retorna todos os resultados
+    )
+
+    merged_count = 0
+    
+    for name, count in duplicates:
+        products = (
+            session.query(Product)
+            .filter(Product.name == name)
+            .order_by(Product.id)
+            .all()
+        )
+        if keep == "first": #mantem o primeiro ID do produto e junta para deletar o resto
+            main_product = products[0] # mantem o produto 0
+            to_merge = products[1:] # para deletar depois pega depois do produto 0
+        #keep == "last" (qualquer coisa vai entender como último)
+        else:
+            main_product = products[-1]
+            to_merge = products[:-1]
+
+        #======JUNTA TODOS OS ESTOQUES DOS ITENS DUPLICADOS====
+        total_stock = main_product.stock
+        for product in to_merge:
+            total_stock += product.stock
+
+        main_product.stock = total_stock
+        #======================================================
+
+        #deleta os duplicados
+        for product in to_merge:
+            session.delete(product)
+            merged_count += 1
+            print(f" Mesclado: {product.name} (ID:{product.id})")
+        print (f"Produto final: {main_product.name} (ID: {main_product.id})")
+    session.commit()
+    return merged_count
+
 #Função para criar uma venda com produtos
 def create_sale(session:Session, products: List[dict], payment_method: str):
     """
