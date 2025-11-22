@@ -2,8 +2,22 @@ from sqlalchemy.orm import Session
 from database.models import Product, Sale, sales_products
 from typing import List, Optional
 #Optional -> pode retorna nulo ou string/int/float etc
-#função para criar produtos                                               #desc: opcional
+#função para criar produtos                      
+# #Função para validar produto antes de criar/ataulizar
+def validate_product_data(name: str = None, price: float = None, stock: int = None):
+    if name is not None and len(name.strip()) == 0:
+        raise ValueError("Nome do produto não pode ser vazio")
+    
+    if price is not None and price < 0:
+        raise ValueError("Preço não pode ser negativo -> price >= 0")
+    
+    if stock is not None and stock < 0:
+        raise ValueError("Estoque não pode ser negativo -> stock >= 0")
+                             #desc: opcional
 def create_product(session: Session, name: str, price: float, stock: int, description: str = None):
+    #valida os dados antes de criar
+    validate_product_data(name=name, price=price, stock=stock)
+
     new_product= Product(
         name=name,
         price=price,
@@ -30,6 +44,11 @@ def update_product(session:Session, product_id: int, **kwargs):
     product = get_product_by_id(session,product_id)
 
     if product:
+        validate_product_data(
+            name=kwargs.get('name'),
+            price=kwargs.get('price'),
+            stock=kwargs.get('stock')
+        )
         for key, value in kwargs.items():
             #hasattr(objeto, 'nome_do_atributo')
             #se o atributo existe -> ? true:false
@@ -125,32 +144,42 @@ def create_sale(session:Session, products: List[dict], payment_method: str):
 
     for item in products:
         product = get_product_by_id(session, item['product_id'])
-        if product and product.stock >= item['quantity']:
-                #Calcular o subtotal
-                subtotal = product.price * item['quantity']
-                total += subtotal
-                #diminui do estoque
-                product.stock -= item['quantity']
-                #adiciona o produto à venda
-                sale_items.append({
-                    'product': product,
-                    'quantity': item['quantity'],
-                    'unit_price': product.price
-                })
-        else:
-            return None #não existe ou sem estoque
+        # O produto existe?
+        if not product:
+            raise ValueError (f"Produto com ID {item['product_id']} não encontrado")
+        # Quantidade Valida?
+        if item['quantity'] <= 0:
+            raise ValueError(f"Quantidade deve ser maior que zero. Produto: {product.name}")
+        # Tem estoque o suficiente ?
+        if product.stock < item['quantity']:
+            raise ValueError(
+                f"Estoque insuficiente para {product.name}"
+                f"Disponível: {product.stock}, Solicitado: {item['quantity']}"
+            )
         
-    #Criar venda
+        subtotal = product.price * item['quantity']
+        total += subtotal
+
+        #subtrair do stock
+        product.stock -= item['quantity']
+
+        sale_items.append({
+            'product': product,
+            'quantity': item['quantity'],
+            'unit_price': product.price
+        })
+
     new_sale = Sale(
         total=total,
-        payment_method = payment_method
+        payment_method=payment_method
     )
-
+        
     session.add(new_sale)
-    session.flush()
+    session.flush() # Gera o id da venda sem fazer commit
 
+    #for para inserir prdutos na tabela de relacionamentos
     for item in sale_items:
-        # STATMENTE para comando INSERT SQL
+        # STATMENT para comandos SQL, nesse caso INSERT 
         stmt = sales_products.insert().values(
             sale_id=new_sale.id,
             product_id=item['product'].id,
@@ -158,11 +187,118 @@ def create_sale(session:Session, products: List[dict], payment_method: str):
             unit_price=item['unit_price']
         )
         session.execute(stmt)
-    #salva quaisquer alterações
+
     session.commit()
     session.refresh(new_sale)
 
     return new_sale
+        
+#Função para buscar detalhes de uma venda (produtos vendidos)
+def get_sale_details(session:Session, sale_id: int ) -> dict:
+    sale = get_sale_by_id(session, sale_id)
+    if not sale:
+        return None #Venda não existe
+
+    from sqlalchemy import select
+    stmt = select(
+        sales_products.c.product_id, # SELECT product_id FROM sales_products;
+        sales_products.c.quantity,
+        sales_products.c.unit_price
+    ).where(sales_products.c.sale_id == sale_id)
+
+    items = session.execute(stmt).fetchall()
+
+    products_list = []
+    for item in items:
+        product = get_product_by_id(session, item.product_id)
+        if product:
+            products_list.append({
+                'product_id': product.id,
+                'product_name': product.name,
+                'quantity': item.quantity,
+                'unit_price': float(item.unit_price),
+                'subtotal': float(item.quantity * item.unit_price)
+            })
+        
+    return {
+        'sale_id': sale.id,
+        'date': sale.date,
+        'total': float(sale.total),
+        'payment_method': sale.payment_method,
+        'products': products_list
+    }
+
+#Função para cancelar venda (deletar e devolver o estoque)(cancelar stmt)
+def cancel_sale(session: Session, sale_id: int) -> bool:
+    sale = get_sale_by_id(session, sale_id)
+    if not sale:
+        return False
+    
+    from sqlalchemy import select, delete
+    
+    stmt = select(
+        sales_products.c.product_id,
+        sales_products.c.quantity
+    ).where(sales_products.c.sale_id == sale_id)
+
+    items = session.execute(stmt).fetchall()
+
+    for item in items:
+        product = get_product_by_id(session, item.product_id)
+        if product:
+            product.stock += item.quantity
+
+    delete_stmt = delete(sales_products).where(sales_products.c.sale_id == sale_id)
+    session.execute(delete_stmt)
+
+    session.delete(sale)
+    session.commit()
+    print(f"Venda #{sale_id} cancelada com sucesso")
+    return True
+
+    
+    
+    
+    # for item in products:
+    #     product = get_product_by_id(session, item['product_id'])
+    #     if product and product.stock >= item['quantity']:
+    #             #Calcular o subtotal
+    #             subtotal = product.price * item['quantity']
+    #             total += subtotal
+    #             #diminui do estoque
+    #             product.stock -= item['quantity']
+    #             #adiciona o produto à venda
+    #             sale_items.append({
+    #                 'product': product,
+    #                 'quantity': item['quantity'],
+    #                 'unit_price': product.price
+    #             })
+    #     else:
+    #         return None #não existe ou sem estoque
+        
+    # #Criar venda
+    # new_sale = Sale(
+    #     total=total,
+    #     payment_method = payment_method
+    # )
+
+    # session.add(new_sale)
+    # session.flush()
+
+    # for item in sale_items:
+    #     # STATMENTE para comando INSERT SQL
+    #     stmt = sales_products.insert().values(
+    #         sale_id=new_sale.id,
+    #         product_id=item['product'].id,
+    #         quantity=item['quantity'],
+    #         unit_price=item['unit_price']
+    #     )
+    #     session.execute(stmt)
+    # #salva quaisquer alterações
+    # session.commit()
+    # session.refresh(new_sale)
+
+    # return new_sale
 
 #Função que retorna todas as vendas
 def get_all_sales(session:Session) -> List[Sale]:
