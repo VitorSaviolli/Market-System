@@ -306,3 +306,72 @@ def get_all_sales(session:Session) -> List[Sale]:
 
 def get_sale_by_id(session:Session, sale_id: int) -> Optional[Sale]:
     return session.query(Sale).filter(Sale.id == sale_id).first()
+
+def search_products_by_name(session: Session, search_term: str) -> List[Product]:
+    return (
+        session.query(Product)
+        .filter(Product.name.ilike(f"%{search_term}%"))
+        # ilike = case-insensitive LIKE
+        # 'arr' encontra: "Arroz", "ARROZ", "arroz"
+        .all()
+    )
+
+def get_low_stock_products(session: Session, limit: int = 10) -> List[Product]:
+    return(
+        session.query|(Product)
+        .filter(Product.stock <= limit)
+        .order_by(Product.stock.asc()) #Menor estoque primeiro
+        .all()
+    )
+
+def get_total_sales(session: Session, start_date=None, end_date=None) -> dict:
+    from sqlalchemy import func
+
+    query = session.query(
+        func.count(Sale.id).label('sales_count'), #COUNT(sale.id) AS sales_count
+        func.sum(Sale.total).label('total_amount') #SUM(sale.total) AS total_amount
+    )
+    #Filtra por data caso fornecido
+    if start_date:
+        query = query.filter(Sale.data >= start_date)
+    if end_date:
+        query = query.filter(Sale.date <= end_date)
+    
+    result = query.first()
+    return {
+        'sales_count': result.sales_count or 0,
+        'total_amount': float(result.total_amount or 0)
+    }
+
+#REtorna os produtos mais vendidos
+def get_top_selling_products(session: Session, limit: int = 5)-> List[dict]:
+    from sqlalchemy import func
+    results = (
+        session.query(
+            Product.id,
+            Product.name,
+            func.sum(sales_products.c.quantity).label('total_sold'),
+            func.count(sales_products.c.sale_id).label('times_sold')
+        )
+        .join(sales_products, Product.id == sales_products.c.product_id)
+        .group_by(Product.id, Product.name)
+        .limit(limit)
+        # .all()
+        # SELECT 
+        # products.id,
+        # products.name,
+        # SUM(sales_products.quantity) AS total_sold,
+        # COUNT(sales_products.sale_id) AS times_sold
+        # FROM 
+        #     products
+        # INNER JOIN 
+        #     sales_products ON products.id = sales_products.product_id
+        # GROUP BY 
+        #     products.id, 
+        #     products.name
+        # ORDER BY 
+        #     SUM(sales_products.quantity) DESC
+        # LIMIT 5;
+        .all()
+    )
+    
